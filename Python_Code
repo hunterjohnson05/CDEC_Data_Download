@@ -1,0 +1,62 @@
+def CDEC_scraping(CDEC_name, end_year, path_location):
+    
+    #Convert input formatrs and determine current month and year
+    Reservoir_Name = CDEC_name
+    CurrentMonth = datetime.now().strftime('%m')
+    CurrentYear = "20" + datetime.now().strftime('%y')
+    CurrentYear = int(CurrentYear)
+    end_year = int(end_year)
+    #Create list of urls to be scraped
+    urls=[f"https://cdec.water.ca.gov/dynamicapp/QueryMonthly?s={Reservoir_Name}&end={j}-{CurrentMonth}&span=24months" for j in list(range(CurrentYear,end_year,-2))]
+    
+    #Convert list of urls to html format
+    html_content = requests.get(urls[1]).text
+    
+    #Convert html format into a data frame 
+    periods = len(urls)
+    all_data = [None]*periods
+    for i in range(0,periods):
+        html_content = requests.get(urls[i]).text
+        soup = bs(html_content, "lxml")
+        CDEC_table = soup.find("table", attrs={"class": "dt"})
+        CDEC_table_data = CDEC_table.tbody.find_all("tr")
+        data = []
+        for j in range(0,24):
+            for td in CDEC_table_data[j].find_all("td"):
+        # remove any newlines and extra spaces from left and right
+                data.append(td.string)
+        all_data[i]=data
+
+    data_total=list(itertools.chain.from_iterable(all_data))
+    entries = len(data_total)
+
+    #Generate lists for each type in data list
+    date_index = list(range(0, entries, 3))
+    storage_index = list(range(1, entries, 3)) 
+    note_index = list(range(2, entries, 3)) 
+
+    #Create storage list
+    storages=[]
+    len_storage=len(storage_index)
+    for x in range(0,len_storage):
+        storages.append(data_total[storage_index[x]])
+
+    #Create dates list
+    dates=[]
+    len_date=len(date_index)
+    for y in range(0,len_date):
+        dates.append(data_total[date_index[y]])
+    DATES = [datetime.strptime(x,'%m/%Y') for x in dates]
+
+    #Create notes list
+    notes=[]
+    len_notes=len(note_index)
+    for z in range(0,len_notes):
+        notes.append(data_total[note_index[z]])
+
+    Final_data = pd.DataFrame(list(zip(DATES, storages, notes)), columns =['Date', 'Storages', 'Notes']) 
+    Final_data.sort_values(by=['Date'], inplace=True)
+    print(Final_data)
+    Final_data.to_csv(path_location, index=False)
+    
+ #CDEC_scraping("NCM", 1991, "/Users/hunter/Desktop/Coding/Web Scraping/Nac_Data.csv") #Test function
