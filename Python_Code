@@ -1,3 +1,9 @@
+from datetime import datetime
+import requests
+from bs4 import BeautifulSoup as bs
+import itertools
+import pandas as pd
+
 def CDEC_scraping(CDEC_name, end_year, path_location):
     
     #Convert input formatrs and determine current month and year
